@@ -10,77 +10,28 @@ import UIKit
 import QuartzCore
 import SceneKit
 
-class GameViewController: UIViewController {
+class GameViewController: UIViewController, SCNSceneRendererDelegate {
     override func viewDidLoad() {
+		//Super
         super.viewDidLoad()
+		
+		//Initialize
+		m_State		= StateGame();
+		let GameView	= self.view as SCNView;
+		
+		//Configure scene view
+		GameView.scene					= m_State!.getScene();
+		GameView.backgroundColor		= UIColor.cyanColor();
+		GameView.showsStatistics		= true;
+		GameView.allowsCameraControl	= true;
+		GameView.delegate				= self;
         
-        // create a new scene
-        let scene = SCNScene()
-        
-        // create and add a camera to the scene
-        let cameraNode = SCNNode()
-        cameraNode.camera = SCNCamera()
-        scene.rootNode.addChildNode(cameraNode)
-        
-        // place the camera
-        cameraNode.position = SCNVector3(x: 0, y: 0, z: 3)
-        
-        // create and add a light to the scene
-        let lightNode = SCNNode()
-        lightNode.light = SCNLight()
-        lightNode.light.type = SCNLightTypeOmni
-        lightNode.position = SCNVector3(x: 0, y: 10, z: 10)
-        scene.rootNode.addChildNode(lightNode)
-        
-        // create and add an ambient light to the scene
-        let ambientLightNode = SCNNode()
-        ambientLightNode.light = SCNLight()
-        ambientLightNode.light.type = SCNLightTypeAmbient
-        ambientLightNode.light.color = UIColor.darkGrayColor()
-        scene.rootNode.addChildNode(ambientLightNode)
-        
-        // create and add a 3d box to the scene
-        let boxNode = SCNNode()
-        boxNode.geometry = SCNBox(width: 1, height: 1, length: 1, chamferRadius: 0.02)
-        scene.rootNode.addChildNode(boxNode)
-        
-        // create and configure a material
-        let material = SCNMaterial()
-        material.diffuse.contents = UIImage(named: "texture")
-        material.specular.contents = UIColor.grayColor()
-        material.locksAmbientWithDiffuse = true
-        
-        // set the material to the 3d object geometry
-        boxNode.geometry.firstMaterial = material
-        
-        // animate the 3d object
-        let animation: CABasicAnimation = CABasicAnimation(keyPath: "rotation")
-        animation.toValue = NSValue(SCNVector4: SCNVector4(x: 1, y: 1, z: 0, w: Float(M_PI)*2))
-        animation.duration = 5
-        animation.repeatCount = MAXFLOAT //repeat forever
-        boxNode.addAnimation(animation, forKey: nil)
-        
-        // retrieve the SCNView
-        let scnView = self.view as SCNView
-        
-        // set the scene to the view
-        scnView.scene = scene
-        
-        // allows the user to manipulate the camera
-        scnView.allowsCameraControl = true
-        
-        // show statistics such as fps and timing information
-        scnView.showsStatistics = true
-        
-        // configure the view
-        scnView.backgroundColor = UIColor.blackColor()
-        
-        // add a tap gesture recognizer
-        let tapGesture = UITapGestureRecognizer(target: self, action: "handleTap:")
-        let gestureRecognizers = NSMutableArray()
-        gestureRecognizers.addObject(tapGesture)
-        gestureRecognizers.addObjectsFromArray(scnView.gestureRecognizers)
-        scnView.gestureRecognizers = gestureRecognizers
+        //Add touch handler
+		let tapGesture = UITapGestureRecognizer(target: self, action: "handleTap:");
+		let gestureRecognizers = NSMutableArray();
+		gestureRecognizers.addObject(tapGesture);
+		gestureRecognizers.addObjectsFromArray(GameView.gestureRecognizers);
+		GameView.gestureRecognizers = gestureRecognizers;
     }
     
     func handleTap(gestureRecognize: UIGestureRecognizer) {
@@ -118,11 +69,24 @@ class GameViewController: UIViewController {
             SCNTransaction.commit()
         }
     }
+	
+	func renderer(renderer:SCNSceneRenderer, updateAtTime current:NSTimeInterval) {
+		//If there's a previous frame
+		if (m_LastTime >= 0) {
+			//Update with delta
+			let Delta = (Int)((current - m_LastTime) * 1000.0);
+			m_State!.update(Delta);
+			
+		}
+		
+		//Save time
+		m_LastTime = current;
+	}
     
     override func shouldAutorotate() -> Bool {
         return true
     }
-    
+	
     override func supportedInterfaceOrientations() -> Int {
         if UIDevice.currentDevice().userInterfaceIdiom == .Phone {
             return Int(UIInterfaceOrientationMask.AllButUpsideDown.toRaw())
@@ -135,5 +99,8 @@ class GameViewController: UIViewController {
         super.didReceiveMemoryWarning()
         // Release any cached data, images, etc that aren't in use.
     }
-
+	
+	//Class member
+	var m_State: StateGame?			= nil;
+	var m_LastTime: NSTimeInterval	= -1;
 }
