@@ -76,7 +76,6 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
 			//Update with delta
 			let Delta = (Int)((current - m_LastTime) * 1000.0);
 			m_State!.update(Delta);
-			
 		}
 		
 		//Save time
