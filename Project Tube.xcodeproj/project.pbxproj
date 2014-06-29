@@ -13,6 +13,7 @@
 		8325EE571956F4AA0014A603 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8325EE561956F4AA0014A603 /* Images.xcassets */; };
 		8325EE631956F4AB0014A603 /* Project_TubeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8325EE621956F4AB0014A603 /* Project_TubeTests.swift */; };
 		832DB4E51956FC6A00BE350A /* StateGame.swift in Sources */ = {isa = PBXBuildFile; fileRef = 832DB4E41956FC6A00BE350A /* StateGame.swift */; };
+		836BCC621959B153002B4659 /* TouchInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 836BCC611959B153002B4659 /* TouchInfo.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -36,6 +37,7 @@
 		8325EE611956F4AB0014A603 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		8325EE621956F4AB0014A603 /* Project_TubeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Project_TubeTests.swift; sourceTree = "<group>"; };
 		832DB4E41956FC6A00BE350A /* StateGame.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StateGame.swift; sourceTree = "<group>"; };
+		836BCC611959B153002B4659 /* TouchInfo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TouchInfo.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -116,6 +118,7 @@
 				8325EE4F1956F4AA0014A603 /* AppDelegate.swift */,
 				8325EE511956F4AA0014A603 /* GameViewController.swift */,
 				832DB4E31956FC3100BE350A /* States */,
+				836BCC601959B10A002B4659 /* System */,
 			);
 			name = Sources;
 			path = src;
@@ -128,6 +131,15 @@
 			);
 			name = States;
 			path = states;
+			sourceTree = "<group>";
+		};
+		836BCC601959B10A002B4659 /* System */ = {
+			isa = PBXGroup;
+			children = (
+				836BCC611959B153002B4659 /* TouchInfo.swift */,
+			);
+			name = System;
+			path = system;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -230,6 +242,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				8325EE521956F4AA0014A603 /* GameViewController.swift in Sources */,
+				836BCC621959B153002B4659 /* TouchInfo.swift in Sources */,
 				832DB4E51956FC6A00BE350A /* StateGame.swift in Sources */,
 				8325EE501956F4AA0014A603 /* AppDelegate.swift in Sources */,
 			);
