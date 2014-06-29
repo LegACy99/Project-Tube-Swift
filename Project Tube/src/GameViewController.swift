@@ -23,6 +23,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
 		//Configure scene view
 		GameView.scene					= m_State!.getScene();
 		GameView.backgroundColor		= UIColor.cyanColor();
+		GameView.multipleTouchEnabled	= true;
 		GameView.showsStatistics		= true;
 		GameView.delegate				= self;
         
@@ -114,7 +115,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
 			if (Info != nil) {
 				//Press
 				let Location = Touch.locationInView(self.view);
-				(Info!).pressed(Location.x, y: Location.y);
+				Info!.pressed(Location.x, y: Location.y);
 			}
 		}
 	}
@@ -161,6 +162,13 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
 			//Update with delta
 			let Delta = (Int)((current - m_LastTime) * 1000.0);
 			m_State!.update(Delta, touches: m_Touches);
+		}
+		
+		//For all touch
+		for Touch in m_Touches {
+			//Manage touches
+			if (!Touch.isPressed() && Touch.wasPressed())		{ Touch.removed();											}
+			else if (Touch.isPressed() && !Touch.wasPressed())	{ Touch.dragged(Touch.getStartX(), y: Touch.getStartY());	}
 		}
 		
 		//Save time
