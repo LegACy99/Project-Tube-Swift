@@ -74,28 +74,14 @@ class StateGame {
 		
 		//For all segment
 		var Z: Float = 0;
-		for var i = 0; i < 3; i++ {
-			//Create floor
-			let Floor		= SCNNode();
-			Floor.position	= SCNVector3(x:  2, y: 0, z: 0);
-			Floor.geometry	= SCNBox(width: 0.25, height: 1, length: 2, chamferRadius: 0.02);
-			
-			//Create material for floor
-			Floor.geometry.firstMaterial							= SCNMaterial();
-			Floor.geometry.firstMaterial.diffuse.contents			= UIColor.redColor();
-			Floor.geometry.firstMaterial.locksAmbientWithDiffuse	= true;
-			
+		for var i = 0; i < SEGMENT_MAX; i++ {
 			//Create segment
-			let Segment			= SCNNode();
-			Segment.position	= SCNVector3(x:  0, y: 0, z: Z - 1);
-			Segment.rotation	= SCNVector4(x: 0, y: 0, z: 1, w: 270.0 / 180.0 * Float(M_PI));
-			
-			//Add
-			Segment.addChildNode(Floor);
+			let Segment			= createTubeSegment();
+			Segment.position	= SCNVector3(x:  0, y: 0, z: Z - 0.5);
 			m_Tube.addChildNode(Segment);
 			
 			//Next
-			Z -= 2.1;
+			Z -= TILE_LENGTH + SEGMENT_GAP;
 		}
 		
 		//Setup scene
@@ -152,21 +138,57 @@ class StateGame {
 		
 		//Check segment
 		let Segment : SCNNode = m_Tube.childNodes[0] as SCNNode;
-		if (Segment.position.z - 1 >= -m_Distance) {
+		if (Segment.position.z - TILE_LENGTH >= -m_Distance) {
 			//Configure angle
-			m_FloorAngle -= 8.0;
+			/*m_FloorAngle -= 8.0;
 			if (m_FloorAngle < 0)			{ m_FloorAngle += 360.0; }
-			else if (m_FloorAngle > 360)	{ m_FloorAngle -= 360.0; }
+			else if (m_FloorAngle > 360)	{ m_FloorAngle -= 360.0; }*/
 			
-			//Set new position
-			Segment.position = SCNVector3(x: Segment.position.x, y: Segment.position.y, z: Segment.position.z - 6.3);
-			Segment.rotation = SCNVector4(x: 0, y: 0, z: 1, w: m_FloorAngle / 180.0 * Float(M_PI));
-			
-			//Re-add
+			//Remove
 			Segment.removeFromParentNode();
-			m_Tube.addChildNode(Segment);
+			
+			//Create new segment
+			let NewSegment		= createTubeSegment();
+			NewSegment.position	= SCNVector3(x:  0, y: 0, z: Segment.position.z - (Float(SEGMENT_MAX) * (TILE_LENGTH + SEGMENT_GAP)));
+			m_Tube.addChildNode(NewSegment);
 		}
 	}
+	
+	func createTubeSegment() -> SCNNode {
+		//Create segment
+		let Segment = SCNNode();
+		for var angle = 0; angle < 360; angle += 30 {
+			//Check if empty or not
+			let Chance = Int(arc4random_uniform(6));
+			if (Chance > 0) {
+				//Create floor
+				let Floor		= SCNNode();
+				Floor.position	= SCNVector3(x:  2, y: 0, z: 0);
+				Floor.geometry	= SCNBox(width: Chance == 1 ? 1.25 : 0.25, height: 1.2, length: TILE_LENGTH, chamferRadius: 0.02);
+				
+				//Create material for floor
+				Floor.geometry.firstMaterial							= SCNMaterial();
+				Floor.geometry.firstMaterial.diffuse.contents			= UIColor(red: 1, green: Chance == 1 ? 0.25 : 0, blue: Chance == 1 ? 0.25 : 0, alpha: 1);
+				Floor.geometry.firstMaterial.locksAmbientWithDiffuse	= true;
+				
+				//Create slice
+				let Slice		= SCNNode();
+				Slice.rotation	= SCNVector4(x: 0, y: 0, z: 1, w: Float(angle) / 180.0 * Float(M_PI));
+				Slice.addChildNode(Floor);
+				
+				//Add to segment
+				Segment.addChildNode(Slice);
+			}
+		}
+		
+		//Return
+		return Segment;
+	}
+	
+	//Constants
+	let TILE_LENGTH: Float	= 2;
+	let SEGMENT_GAP: Float	= 0.1;
+	let SEGMENT_MAX: Int	= 8;
 	
 	//Data
 	var m_Distance: Float			= 0;
