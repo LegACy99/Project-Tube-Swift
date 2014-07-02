@@ -60,11 +60,10 @@ class StateGame {
 	
 	func setup() {
 		//Initialize
-		m_Distance			= 0;
-		m_TubeAngle			= 0;
-		m_FloorAngle		= 270;
-		m_FloorTargetAngle	= 0;
-		m_FloorStraight		= 0;
+		m_Distance	= 0;
+		m_TubeAngle	= 0;
+		m_Straight	= 4;
+		m_ExitTile	= INITIAL_EXIT;
 		
 		//Reset object
 		var TubeChildren: SCNNode[] = [];
@@ -73,14 +72,10 @@ class StateGame {
 		m_Ball.position	= SCNVector3(x: 0, y: -1.375, z: 0);
 		
 		//For all segment
-		var Z: Float = 0;
+		var Z: Float = -0.5;
 		for var i = 0; i < SEGMENT_MAX; i++ {
 			//Create segment
-			let Segment			= createTubeSegment();
-			Segment.position	= SCNVector3(x:  0, y: 0, z: Z - 0.5);
-			m_Tube.addChildNode(Segment);
-			
-			//Next
+			generateSegment(m_Tube, z: Z);
 			Z -= TILE_LENGTH + SEGMENT_GAP;
 		}
 		
@@ -100,31 +95,9 @@ class StateGame {
 		
 		//If touched
 		if (touches[0].isPressed()) {
-			//Two finger?
-			if (touches[1].isPressed()) {
-				//Calculate angle
-				let Offset	= touches[1].getCurrentY() - touches[1].getStartY();
-				let Angle	= m_Camera.rotation.w - (Offset / 10000.0 * Float(M_PI));
-				
-				//Update
-				//m_Camera.rotation = SCNVector4(x: 1, y: 0, z: 0, w: Angle);
-			} else {
-				//Get offset
-				/*let Offset = touches[0].getCurrentY() - touches[0].getStartY();
-				
-				//Calculate position
-				var CameraY = m_Camera.position.y;
-				var CameraZ = m_Camera.position.z;
-				if (touches[0].getStartX() > 240)	{ CameraY -= Offset / 1000.0; }
-				else								{ CameraZ += Offset / 1000.0; }
-				
-				//Update
-				m_Camera.position = SCNVector3(x: 0, y: CameraY, z: CameraZ);*/
-				
-				//Change angle
-				m_TubeAngle += touches[0].getOffsetX() / 10.0 * Float(M_PI) * Factor;
-				m_Tube.rotation = SCNVector4(x: 0, y: 0, z: 1, w: m_TubeAngle);
-			}
+			//Change angle
+			m_TubeAngle += touches[0].getOffsetX() / 10.0 * Float(M_PI) * Factor;
+			m_Tube.rotation = SCNVector4(x: 0, y: 0, z: 1, w: m_TubeAngle);
 		}
 		
 		//Update
@@ -139,41 +112,62 @@ class StateGame {
 		//Check segment
 		let Segment : SCNNode = m_Tube.childNodes[0] as SCNNode;
 		if (Segment.position.z - TILE_LENGTH >= -m_Distance) {
-			//Configure angle
-			/*m_FloorAngle -= 8.0;
-			if (m_FloorAngle < 0)			{ m_FloorAngle += 360.0; }
-			else if (m_FloorAngle > 360)	{ m_FloorAngle -= 360.0; }*/
-			
-			//Remove
+			//Remove and generate
 			Segment.removeFromParentNode();
-			
-			//Create new segment
-			let NewSegment		= createTubeSegment();
-			NewSegment.position	= SCNVector3(x:  0, y: 0, z: Segment.position.z - (Float(SEGMENT_MAX) * (TILE_LENGTH + SEGMENT_GAP)));
-			m_Tube.addChildNode(NewSegment);
+			generateSegment(m_Tube, z: Segment.position.z - (Float(SEGMENT_MAX) * (TILE_LENGTH + SEGMENT_GAP)));
 		}
 	}
 	
-	func createTubeSegment() -> SCNNode {
+	func generateSegment(tube: SCNNode, z: Float) {
+		//Initialize tiles
+		var Tiles: Int[] = [];
+		for var i = 0; i < TUBE_SLICES; i++ { Tiles.append(0); }
+		Tiles[m_ExitTile] = 1;
+		
+		//if straight, do nothing
+		if (m_Straight > 0) { m_Straight--; }
+		else {
+			//Determine new data
+			var Offset = 0;
+			while Offset == 0 { Offset = Int(arc4random_uniform(UInt32(TUBE_SLICES / 2))) - (TUBE_SLICES / 4); }
+			m_Straight = 1 + Int(arc4random_uniform(2));
+			
+			//While there's offset
+			while Offset != 0 {
+				//Change tile
+				m_ExitTile += Offset > 0 ? 1 : -1;
+				if (m_ExitTile >= TUBE_SLICES)	{ m_ExitTile -= TUBE_SLICES; }
+				else if (m_ExitTile < 0)		{ m_ExitTile += TUBE_SLICES; }
+				
+				//Put tile
+				Tiles[m_ExitTile] = 1;
+				
+				//Next
+				Offset += Offset > 0 ? -1 : 1;
+			}
+		}
+		
 		//Create segment
-		let Segment = SCNNode();
-		for var angle = 0; angle < 360; angle += 30 {
-			//Check if empty or not
-			let Chance = Int(arc4random_uniform(6));
-			if (Chance > 0) {
+		let Segment			= SCNNode();
+		Segment.position	= SCNVector3(x:  0, y: 0, z: z);
+		
+		//For each tile
+		for var i = 0; i < Tiles.count; i++ {
+			//If not empty
+			if (Tiles[i] > 0) {
 				//Create floor
 				let Floor		= SCNNode();
 				Floor.position	= SCNVector3(x:  2, y: 0, z: 0);
-				Floor.geometry	= SCNBox(width: Chance == 1 ? 1.25 : 0.25, height: 1.2, length: TILE_LENGTH, chamferRadius: 0.02);
+				Floor.geometry	= SCNBox(width: 0.25, height: 1.2, length: TILE_LENGTH, chamferRadius: 0.02);
 				
 				//Create material for floor
 				Floor.geometry.firstMaterial							= SCNMaterial();
-				Floor.geometry.firstMaterial.diffuse.contents			= UIColor(red: 1, green: Chance == 1 ? 0.25 : 0, blue: Chance == 1 ? 0.25 : 0, alpha: 1);
+				Floor.geometry.firstMaterial.diffuse.contents			= UIColor(red: 1, green: 0, blue: 0, alpha: 1);
 				Floor.geometry.firstMaterial.locksAmbientWithDiffuse	= true;
 				
 				//Create slice
 				let Slice		= SCNNode();
-				Slice.rotation	= SCNVector4(x: 0, y: 0, z: 1, w: Float(angle) / 180.0 * Float(M_PI));
+				Slice.rotation	= SCNVector4(x: 0, y: 0, z: 1, w: Float(i) * 30.0 / 180.0 * Float(M_PI));
 				Slice.addChildNode(Floor);
 				
 				//Add to segment
@@ -181,21 +175,22 @@ class StateGame {
 			}
 		}
 		
-		//Return
-		return Segment;
+		//Attach
+		tube.addChildNode(Segment);
 	}
 	
 	//Constants
-	let TILE_LENGTH: Float	= 2;
+	let TILE_LENGTH: Float	= 1.5;
 	let SEGMENT_GAP: Float	= 0.1;
-	let SEGMENT_MAX: Int	= 8;
+	let INITIAL_EXIT: Int	= 9;
+	let TUBE_SLICES: Int	= 12;
+	let SEGMENT_MAX: Int	= 12;
 	
 	//Data
-	var m_Distance: Float			= 0;
-	var m_TubeAngle: Float			= 0;
-	var m_FloorAngle: Float			= 0;
-	var m_FloorTargetAngle: Float	= 0;
-	var m_FloorStraight: Float		= 0;
+	var m_Straight: Int		= 0;
+	var m_ExitTile: Int		= 0;
+	var m_Distance: Float	= 0;
+	var m_TubeAngle: Float	= 0;
 	
 	//Scene objects
 	var m_Ball:		SCNNode;
