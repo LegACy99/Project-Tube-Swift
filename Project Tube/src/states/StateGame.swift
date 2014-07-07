@@ -60,13 +60,16 @@ class StateGame {
 	
 	func setup() {
 		//Initialize
-		m_Distance		= 0;
-		m_Straight		= 4;
-		m_TubeAngle		= 0;
-		m_BallAngleY	= 0;
-		m_OrbitAngleY	= 0;
-		m_OrbitPosition	= SCNVector3(x: -ORBIT_RADIUS, y: 0, z: 0);
-		m_ExitTile		= INITIAL_EXIT;
+		m_TileTime			= 0;
+		m_Distance			= 0;
+		m_Straight			= 4;
+		m_TubeAngle			= 0;
+		m_BallAngleY		= 0;
+		m_OrbitAngleY		= 0;
+		m_OrbitEndAnglesY	= [:];
+		m_OrbitStartAnglesY	= [:];
+		m_OrbitPosition		= SCNVector3(x: -ORBIT_RADIUS, y: 0, z: 0);
+		m_ExitTile			= INITIAL_EXIT;
 		
 		//Reset object
 		var TubeChildren: SCNNode[] = [];
@@ -85,11 +88,13 @@ class StateGame {
 	}
 	
 	func update(time: Int, touches: TouchInfo[]) {
-		//Travel
+		//Update time
+		m_TileTime += time;
 		let Factor = Float(time) / 1000.0;
-		m_BallAngleY += Factor * 24.0;
+		
+		/*m_BallAngleY += Factor * 24.0;
 		if (m_BallAngleY > 360.0) { m_BallAngleY -= 360; }
-		//m_Distance += 3.0 * Factor;
+		//m_Distance += 3.0 * Factor;*/
 		
 		//If touched
 		if (touches[0].isPressed()) {
@@ -111,14 +116,31 @@ class StateGame {
 			}
 		}
 		
+		//Update objects
 		updateScene();
 	}
 	
 	func updateScene() {
-		//Initialize
-		let Angle = m_BallAngleY / 180.0 * Float(M_PI);
+		//Check time
+		if (m_TileTime >= 500) {
+			//Reset time
+			m_TileTime -= 500;
+			
+			//Remove first segment
+			let Segment: SCNNode = m_Tube.childNodes[0] as SCNNode;
+			Segment.removeFromParentNode();
+			
+			//Generate new one
+			generateSegment(m_Tube);
+		}
+		
+		//Get angle
+		let Current: SCNNode	= m_Tube.childNodes[0] as SCNNode;
+		let AngleOffset: Float	= m_OrbitEndAnglesY[Current]! - m_OrbitStartAnglesY[Current]!;
+		m_BallAngleY			= m_OrbitStartAnglesY[Current]! + (Float(m_TileTime) / 500.0 * AngleOffset);
 		
 		//Update ball
+		let Angle			= m_BallAngleY / 180.0 * Float(M_PI);
 		let BallX: Float	= cosf(Angle) * ORBIT_RADIUS;
 		let BallZ: Float	= -sinf(Angle) * ORBIT_RADIUS;
 		m_Ball.position		= SCNVector3(x: m_OrbitPosition.x + BallX, y: m_Ball.position.y, z: m_OrbitPosition.z + BallZ);
@@ -134,17 +156,6 @@ class StateGame {
 		let CameraX: Float			= -cosf(Angle + Float(M_PI_2)) * CameraDistance;
 		let CameraZ: Float			= sinf(Angle + Float(M_PI_2)) * CameraDistance;
 		m_Camera.position			= SCNVector3(x: m_Ball.position.x + CameraX, y: m_Ball.position.y + 1.5, z: m_Ball.position.z + CameraZ);
-		
-		//Check angles
-		let OrbitAngle = m_OrbitAngleY + (m_OrbitAngleY < m_BallAngleY ? 360 : 0);
-		if (m_BallAngleY + (Float(SEGMENT_MAX - 1) * SEGMENT_ANGLE) > OrbitAngle) {
-			//Remove first segment
-			let Segment : SCNNode = m_Tube.childNodes[0] as SCNNode;
-			Segment.removeFromParentNode();
-			
-			//Generate new one
-			generateSegment(m_Tube);
-		}
 	}
 	
 	func generateSegment(tube: SCNNode) {
@@ -214,6 +225,19 @@ class StateGame {
 		//Attach
 		tube.addChildNode(Orbit);
 		
+		//Set angle
+		var End		= m_OrbitAngleY + (SEGMENT_ANGLE / 2);
+		var Start	= m_OrbitAngleY - (SEGMENT_ANGLE / 2);
+		if (End > 360) {
+			//Reset to negative
+			Start -= 360;
+			End -= 360;
+		}
+		
+		//Save angle
+		m_OrbitEndAnglesY[Orbit]	= End;
+		m_OrbitStartAnglesY[Orbit]	= Start;
+		
 		//Increase angle
 		m_OrbitAngleY += SEGMENT_ANGLE;
 		if (m_OrbitAngleY > 360) { m_OrbitAngleY -= 360; }
@@ -229,13 +253,18 @@ class StateGame {
 	let SEGMENT_MAX: Int		= 12;
 	
 	//Data
-	var m_Straight: Int				= 0;
-	var m_ExitTile: Int				= 0;
-	var m_Distance: Float			= 0;
-	var m_TubeAngle: Float			= 0;
-	var m_BallAngleY: Float			= 0;
-	var m_OrbitAngleY: Float		= 0;
-	var m_OrbitPosition: SCNVector3	= SCNVector3(x: 0, y: 0, z: 0);
+	var m_Straight: Int		= 0;
+	var m_ExitTile: Int		= 0;
+	var m_TileTime: Int		= 0;
+	var m_Distance: Float	= 0;
+	var m_TubeAngle: Float	= 0;
+	var m_BallAngleY: Float	= 0;
+	
+	//Tube data
+	var m_OrbitAngleY: Float							= 0;
+	var m_OrbitEndAnglesY: Dictionary<SCNNode, Float>	= [:];
+	var m_OrbitStartAnglesY: Dictionary<SCNNode, Float>	= [:];
+	var m_OrbitPosition: SCNVector3						= SCNVector3(x: 0, y: 0, z: 0);
 	
 	//Scene objects
 	var m_Ball:		SCNNode;
