@@ -115,7 +115,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
 			if (Info != nil) {
 				//Press
 				let Location = Touch.locationInView(self.view);
-				Info!.pressed(Location.x, y: Location.y);
+				Info!.pressed(Float(Location.x), y: Float(Location.y));
 			}
 		}
 	}
@@ -129,7 +129,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
 			if (Info != nil) {
 				//Move
 				let Location = Touch.locationInView(self.view);
-				Info!.dragged(Location.x, y: Location.y);
+				Info!.dragged(Float(Location.x), y: Float(Location.y));
 			}
 		}
 	}
@@ -143,7 +143,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
 			if (Info != nil) {
 				//Release
 				let Location = Touch.locationInView(self.view);
-				Info!.released(Location.x, y: Location.y);
+				Info!.released(Float(Location.x), y: Float(Location.y));
 				
 				//Remove
 				m_UITouches.removeValueForKey(Touch);

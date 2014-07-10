@@ -65,17 +65,17 @@ class StateGame {
 		m_Straight			= 4;
 		m_TubeAngle			= 0;
 		m_BallAngleY		= 0;
+		m_OrbitAngleX		= 0;
 		m_OrbitAngleY		= 0;
-		m_OrbitEndAnglesY	= [:];
-		m_OrbitStartAnglesY	= [:];
 		m_OrbitPosition		= SCNVector3(x: -ORBIT_RADIUS, y: 0, z: 0);
 		m_ExitTile			= INITIAL_EXIT;
 		
+		//Clear arrays
+		for Segment in m_Segments { Segment.getNode().removeFromParentNode(); }
+		m_Segments = [];
+		
 		//Reset object
-		var TubeChildren: SCNNode[] = [];
-		for Child: AnyObject in m_Tube.childNodes	{ if (Child is SCNNode) { TubeChildren.append(Child as SCNNode); }	}
-		for Child in TubeChildren					{ Child.removeFromParentNode();										}
-		m_Ball.position	= SCNVector3(x: m_OrbitPosition.x + 10, y: m_OrbitPosition.y - 1.375, z:m_OrbitPosition.z );
+		m_Ball.position	= SCNVector3(x: m_OrbitPosition.x + ORBIT_RADIUS, y: m_OrbitPosition.y - 1.375, z:m_OrbitPosition.z );
 		
 		//Set up scene
 		for var i = 0; i < SEGMENT_MAX; i++ { generateSegment(m_Tube); }
@@ -100,20 +100,7 @@ class StateGame {
 		if (touches[0].isPressed()) {
 			//Change angle
 			m_TubeAngle += touches[0].getOffsetX() / 10.0 * Float(M_PI) * Factor;
-			
-			//For each child
-			for var i = 0; i < m_Tube.childNodes.count; i++ {
-				//If node
-				if (m_Tube.childNodes[i] is SCNNode) {
-					//Get segment
-					let Child = m_Tube.childNodes[i] as SCNNode;
-					if (Child.childNodes.count > 0 && Child.childNodes[0] is SCNNode) {
-						//Rotate
-						let Segment			= Child.childNodes[0] as SCNNode;
-						Segment.rotation	= SCNVector4(x: 0, y: 0, z: 1, w: m_TubeAngle);
-					}
-				}
-			}
+			for Segment in m_Segments { Segment.getSegment().rotation = SCNVector4(x: 0, y: 0, z: 1, w: m_TubeAngle); }
 		}
 		
 		//Update objects
@@ -126,25 +113,20 @@ class StateGame {
 			//Reset time
 			m_TileTime -= 500;
 			
-			//Remove first segment
-			let Segment: SCNNode = m_Tube.childNodes[0] as SCNNode;
-			Segment.removeFromParentNode();
-			
-			//Generate new one
+			//Remove 
+			m_Segments[0].getNode().removeFromParentNode();
+			m_Segments.removeAtIndex(0);
 			generateSegment(m_Tube);
 		}
 		
 		//Get angle
-		let Current: SCNNode	= m_Tube.childNodes[0] as SCNNode;
-		let AngleOffset: Float	= m_OrbitEndAnglesY[Current]! - m_OrbitStartAnglesY[Current]!;
-		m_BallAngleY			= m_OrbitStartAnglesY[Current]! + (Float(m_TileTime) / 500.0 * AngleOffset);
+		let AngleOffset: Float	= m_Segments[0].getEndAngleY() - m_Segments[0].getStartAngleY();
+		m_BallAngleY			= m_Segments[0].getStartAngleY() + (Float(m_TileTime) / 500.0 * AngleOffset);
 		
-		//Update ball
-		let Angle			= m_BallAngleY / 180.0 * Float(M_PI);
-		let BallX: Float	= cosf(Angle) * ORBIT_RADIUS;
-		let BallZ: Float	= -sinf(Angle) * ORBIT_RADIUS;
-		m_Ball.position		= SCNVector3(x: m_OrbitPosition.x + BallX, y: m_Ball.position.y, z: m_OrbitPosition.z + BallZ);
-		//m_Ball.rotation		= SCNVector4(x: 0, y: 1, z: 0, w: Angle);
+		//Update ball position
+		let Orbit		= m_Segments[0].getStartOrbit();
+		let Angle		= m_BallAngleY / 180.0 * Float(M_PI);
+		m_Ball.position	= SCNVector3(x: Orbit.x + (cosf(Angle) * ORBIT_RADIUS), y: Orbit.y, z: Orbit.z + (-sinf(Angle) * ORBIT_RADIUS));
 		
 		//Set camera rotation
 		let YRotation		= SCNMatrix4MakeRotation(Angle, 0, 1, 0);
@@ -187,44 +169,6 @@ class StateGame {
 			}
 		}
 		
-		//Create segment
-		let Segment = SCNNode();
-		for var i = 0; i < Tiles.count; i++ {
-			//If not empty
-			if (Tiles[i] > 0) {
-				//Create floor
-				let Floor		= SCNNode();
-				Floor.position	= SCNVector3(x: 2, y: 0, z: 0);
-				Floor.geometry	= SCNBox(width: 0.25, height: 1.2, length: TILE_LENGTH, chamferRadius: 0.02);
-				
-				//Create material for floor
-				Floor.geometry.firstMaterial							= SCNMaterial();
-				Floor.geometry.firstMaterial.diffuse.contents			= UIColor(red: 1, green: 0, blue: 0, alpha: 1);
-				Floor.geometry.firstMaterial.locksAmbientWithDiffuse	= true;
-				
-				//Create slice
-				let Slice		= SCNNode();
-				Slice.rotation	= SCNVector4(x: 0, y: 0, z: 1, w: Float(i) * 30.0 / 180.0 * Float(M_PI));
-				Slice.addChildNode(Floor);
-				
-				//Add to segment
-				Segment.addChildNode(Slice);
-			}
-		}
-		
-		//Create orbit
-		let Orbit			= SCNNode();
-		Orbit.position		= SCNVector3(x: -ORBIT_RADIUS, y: 0, z: 0);
-		Orbit.rotation		= SCNVector4(x: 0, y: 1, z: 0, w: m_OrbitAngleY / 180.0 * Float(M_PI));
-		
-		//Add segment to its orbit
-		Segment.position	= SCNVector3(x: -Orbit.position.x, y: 0, z: 0);
-		Segment.rotation	= SCNVector4(x: 0, y: 0, z: 1, w: m_TubeAngle);
-		Orbit.addChildNode(Segment);
-		
-		//Attach
-		tube.addChildNode(Orbit);
-		
 		//Set angle
 		var End		= m_OrbitAngleY + (SEGMENT_ANGLE / 2);
 		var Start	= m_OrbitAngleY - (SEGMENT_ANGLE / 2);
@@ -234,9 +178,16 @@ class StateGame {
 			End -= 360;
 		}
 		
-		//Save angle
-		m_OrbitEndAnglesY[Orbit]	= End;
-		m_OrbitStartAnglesY[Orbit]	= Start;
+		//Create segment
+		let Segment2					= TubeSegment.create(Tiles, orbit: m_OrbitPosition, angleX: m_OrbitAngleX, startY: Start, endY: End);
+		Segment2.getNode().rotation		= SCNVector4(x: 0, y: 1, z: 0, w: m_OrbitAngleY / 180.0 * Float(M_PI));
+		Segment2.getNode().position		= SCNVector3(x: -ORBIT_RADIUS, y: 0, z: 0);
+		Segment2.getSegment().position	= SCNVector3(x: -Segment2.getNode().position.x, y: 0, z: 0);
+		Segment2.getSegment().rotation	= SCNVector4(x: 0, y: 0, z: 1, w: m_TubeAngle);
+		
+		//Save
+		m_Segments.append(Segment2);
+		tube.addChildNode(Segment2.getNode());
 		
 		//Increase angle
 		m_OrbitAngleY += SEGMENT_ANGLE;
@@ -244,10 +195,8 @@ class StateGame {
 	}
 	
 	//Constants
-	let TILE_LENGTH: Float		= 2.2;
 	let ORBIT_RADIUS: Float		= 10;
 	let SEGMENT_ANGLE: Float	= 12.0;
-	let SEGMENT_GAP: Float		= 0.1;
 	let INITIAL_EXIT: Int		= 9;
 	let TUBE_SLICES: Int		= 12;
 	let SEGMENT_MAX: Int		= 12;
@@ -261,10 +210,10 @@ class StateGame {
 	var m_BallAngleY: Float	= 0;
 	
 	//Tube data
-	var m_OrbitAngleY: Float							= 0;
-	var m_OrbitEndAnglesY: Dictionary<SCNNode, Float>	= [:];
-	var m_OrbitStartAnglesY: Dictionary<SCNNode, Float>	= [:];
-	var m_OrbitPosition: SCNVector3						= SCNVector3(x: 0, y: 0, z: 0);
+	var m_OrbitAngleY: Float		= 0;
+	var m_OrbitAngleX: Float		= 0;
+	var m_OrbitPosition: SCNVector3	= SCNVector3(x: 0, y: 0, z: 0);
+	var m_Segments: TubeSegment[]	= [];
 	
 	//Scene objects
 	var m_Ball:		SCNNode;
