@@ -102,16 +102,16 @@ class TubeSegment {
 		} else if (m_StartAngleX != m_EndAngleX) {
 			
 		} else {
-			//Get difference
-			let DifferenceX	= m_EndOrbit.x - m_StartOrbit.x;
-			let DifferenceY	= m_EndOrbit.y - m_StartOrbit.y;
-			let DifferenceZ	= m_EndOrbit.z - m_StartOrbit.z;
+			//Get intermediate orbit
+			let OrbitX = m_StartOrbit.x + ((m_EndOrbit.x - m_StartOrbit.x) * factor);
+			let OrbitY = m_StartOrbit.y + ((m_EndOrbit.y - m_StartOrbit.y) * factor);
+			let OrbitZ = m_StartOrbit.z + ((m_EndOrbit.z - m_StartOrbit.z) * factor);
 			
 			//Calculate position
-			let X	= m_StartOrbit.x + (DifferenceX * factor);
-			let Y	= m_StartOrbit.y + (DifferenceY * factor);
-			let Z	= m_StartOrbit.z + (DifferenceZ * factor);
-			Result	= SCNVector3(x: X + m_Segment.position.x, y: Y + m_Segment.position.y, z: Z + m_Segment.position.z);
+			let Radian	= Angle.y / 180.0 * Float(M_PI);
+			let X		= OrbitX + (cosf(Radian) * SEGMENT_ORBIT_DISTANCE);
+			let Z		= OrbitZ + (-sinf(Radian) * SEGMENT_ORBIT_DISTANCE);
+			Result		= SCNVector3(x: X, y: OrbitY, z: Z);
 		}
 		
 		//Return

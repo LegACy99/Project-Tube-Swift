@@ -60,9 +60,11 @@ class StateGame {
 	
 	func setup() {
 		//Initialize
+		m_Tiles				= 0;
 		m_TileTime			= 0;
 		m_Distance			= 0;
 		m_Straight			= 4;
+		m_Direction			= -1;
 		m_TubeAngle			= 0;
 		m_OrbitAngleX		= 0;
 		m_OrbitAngleY		= 0;
@@ -136,6 +138,12 @@ class StateGame {
 		m_Camera.position			= SCNVector3(x: m_Ball.position.x + CameraX, y: m_Ball.position.y + 1.5, z: m_Ball.position.z + CameraZ);
 	}
 	
+	func prepareDirection() {
+		//Set direction
+		m_Direction = Int(arc4random_uniform(2));
+		m_Tiles		= 4 + Int(arc4random_uniform(3) * 2);
+	}
+	
 	func generateSegment(tube: SCNNode) {
 		//Initialize tiles
 		var Tiles: Int[] = [];
@@ -165,34 +173,56 @@ class StateGame {
 			}
 		}
 		
-		//Increase angle
-		/*m_OrbitAngleY += SEGMENT_ANGLE;
-		if (m_OrbitAngleY > 360) { m_OrbitAngleY -= 360; }
-		var End		= m_OrbitAngleY + (SEGMENT_ANGLE / 2);
-		var Start	= m_OrbitAngleY - (SEGMENT_ANGLE / 2);*/
+		//If tiles been used up, set new direction
+		if (m_Tiles <= 0) { prepareDirection(); }
+		m_Tiles--;
 		
-		//Increase orbit
-		let Angle			= m_OrbitAngleY / 180.0 * Float(M_PI);
-		let OffsetX: CFloat	= sinf(Angle) * SEGMENT_TILE_LENGTH;
-		let OffsetY: CFloat	= 0;
-		let OffsetZ: CFloat	= -cosf(Angle) * SEGMENT_TILE_LENGTH;
-		m_OrbitPosition		= SCNVector3(x: m_OrbitPosition.x + OffsetX, y: m_OrbitPosition.y + OffsetY, z: m_OrbitPosition.z + OffsetZ);
+		//Check direction
+		var Segment: TubeSegment? = nil;
+		if (m_Direction == DIRECTION_STRAIGHT) {
+			//Save current orbit
+			let Previous = m_OrbitPosition;
+			
+			//Increase orbit
+			let Angle			= (m_OrbitAngleY + 90.0) / 180.0 * Float(M_PI);
+			let OffsetX: CFloat	= cosf(Angle) * SEGMENT_TILE_LENGTH;
+			let OffsetY: CFloat	= 0;
+			let OffsetZ: CFloat	= -sinf(Angle) * SEGMENT_TILE_LENGTH;
+			m_OrbitPosition		= SCNVector3(x: m_OrbitPosition.x + OffsetX, y: m_OrbitPosition.y + OffsetY, z: m_OrbitPosition.z + OffsetZ);
+			
+			//Create segment
+			Segment	= TubeSegment.create(Tiles, startOrbit: Previous, endOrbit: m_OrbitPosition, angleY: m_OrbitAngleY, angleX: m_OrbitAngleX);
+		} else if (m_Direction == DIRECTION_LEFT || m_Direction == DIRECTION_RIGHT) {
+			//Increase angle
+			var Previous	 = m_OrbitAngleY;
+			m_OrbitAngleY	+= SEGMENT_ANGLE;
+			if (m_OrbitAngleY > 360) {
+				//Reset
+				Previous		-= 360;
+				m_OrbitAngleY	-= 360;
+			}
+			
+			//Create segment
+			Segment	= TubeSegment.create(Tiles, orbit: m_OrbitPosition, angleX: m_OrbitAngleX, startY: Previous, endY: m_OrbitAngleY);
+		}
 		
-		//Create end and start
-		let End		= SCNVector3(x: m_OrbitPosition.x + (OffsetX / 2), y: m_OrbitPosition.y + (OffsetY / 2), z: m_OrbitPosition.z + (OffsetZ / 2));
-		let Start	= SCNVector3(x: m_OrbitPosition.x - (OffsetX / 2), y: m_OrbitPosition.y - (OffsetY / 2), z: m_OrbitPosition.z - (OffsetZ / 2));
-		
-		//Create segment
-		//let Segment	= TubeSegment.create(Tiles, orbit: m_OrbitPosition, angleX: m_OrbitAngleX, startY: Start, endY: End);
-		let Segment	= TubeSegment.create(Tiles, startOrbit: Start, endOrbit: End, angleY: m_OrbitAngleY, angleX: m_OrbitAngleX);
-		Segment.rotate(m_TubeAngle);
-		
-		//Attach
-		tube.addChildNode(Segment.getNode());
-		m_Segments.append(Segment);
+		//If segment is created
+		if (Segment != nil) {
+			//Rotate
+			Segment!.rotate(m_TubeAngle);
+			
+			//Attach
+			tube.addChildNode(Segment!.getNode());
+			m_Segments.append(Segment!);
+		}
 	}
 	
 	//Constants
+	let DIRECTION_UP: Int		= 3;
+	let DIRECTION_DOWN: Int		= 4
+	let DIRECTION_LEFT: Int		= 1;
+	let DIRECTION_RIGHT: Int	= 2;
+	let DIRECTION_STRAIGHT: Int	= 0;
 	let SEGMENT_ANGLE: Float	= 12.0;
 	let INITIAL_EXIT: Int		= 9;
 	let TUBE_SLICES: Int		= 12;
@@ -206,6 +236,8 @@ class StateGame {
 	var m_TubeAngle: Float	= 0;
 	
 	//Tube data
+	var m_Tiles: Int				= 0;
+	var m_Direction: Int			= 0;
 	var m_OrbitAngleY: Float		= 0;
 	var m_OrbitAngleX: Float		= 0;
 	var m_OrbitPosition: SCNVector3	= SCNVector3(x: 0, y: 0, z: 0);
