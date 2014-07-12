@@ -31,7 +31,7 @@ class TubeSegment {
 				//Create floor
 				let Floor		= SCNNode();
 				Floor.position	= SCNVector3(x: 2, y: 0, z: 0);
-				Floor.geometry	= SCNBox(width: 0.25, height: 1.2, length: CGFloat(TILE_LENGTH), chamferRadius: 0.02);
+				Floor.geometry	= SCNBox(width: 0.25, height: 1.2, length: CGFloat(SEGMENT_TILE_LENGTH), chamferRadius: 0.02);
 				
 				//Create material for floor
 				Floor.geometry.firstMaterial							= SCNMaterial();
@@ -48,13 +48,17 @@ class TubeSegment {
 			}
 		}
 		
-		//Create orbit
-		//m_SegmentOrbit.position		= SCNVector3(x: -ORBIT_RADIUS, y: 0, z: 0);
-		//m_SegmentOrbit.rotation		= SCNVector4(x: 0, y: 1, z: 0, w: m_OrbitAngleY / 180.0 * Float(M_PI));
+		//Set angle
+		let AngleY				= (m_StartAngleY + m_EndAngleY) / 2.0;
+		let AngleX				= (m_StartAngleX + m_EndAngleX) / 2.0;
+		m_SegmentOrbit.rotation	= SCNVector4(x: 0, y: 1, z: 0, w: AngleY / 180.0 * Float(M_PI));
 		
-		//Add segment to its orbit
-		//m_Segment.position	= SCNVector3(x: -m_SegmentOrbit.position.x, y: 0, z: 0);
-		//m_Segment.rotation	= SCNVector4(x: 0, y: 0, z: 1, w: m_TubeAngle);
+		//Set position
+		var OrbitX				= (m_StartOrbit.x + m_EndOrbit.x) / 2.0;
+		var OrbitY				= (m_StartOrbit.y + m_EndOrbit.y) / 2.0;
+		var OrbitZ				= (m_StartOrbit.z + m_EndOrbit.z) / 2.0;
+		m_SegmentOrbit.position	= SCNVector3(x: OrbitX, y: OrbitY, z: OrbitZ);
+		m_Segment.position		= SCNVector3(x: SEGMENT_ORBIT_DISTANCE, y: 0, z: 0);
 	}
 	
 	//More specific class constructors
@@ -67,7 +71,6 @@ class TubeSegment {
 	
 	//Accessors
 	func getNode() -> SCNNode			{ return m_SegmentOrbit;	}
-	func getSegment() -> SCNNode		{ return m_Segment;			}
 	func getEndOrbit() -> SCNVector3	{ return m_EndOrbit;		}
 	func getStartOrbit() -> SCNVector3	{ return m_StartOrbit;		}
 	func getStartAngleY() -> Float		{ return m_StartAngleY;		}
@@ -75,8 +78,50 @@ class TubeSegment {
 	func getEndAngleY() -> Float		{ return m_EndAngleY;		}
 	func getEndAngleX() -> Float		{ return m_EndAngleX;		}
 	
-	//Constants
-	let TILE_LENGTH: Float = 2.2;
+	func getIntermediateAngle(factor: Float) -> SCNVector3 {
+		//Calculate angle
+		let AngleY = m_StartAngleY + (factor * (m_EndAngleY - m_StartAngleY));
+		let AngleX = m_StartAngleX + (factor * (m_EndAngleX - m_StartAngleX));
+		
+		//Return
+		return SCNVector3(x: AngleX, y: AngleY, z: 0);
+	}
+	
+	func getIntermediatePosition(factor: Float) -> SCNVector3 {
+		//Initialize
+		var Result	= SCNVector3(x: 0, y: 0, z: 0);
+		let Angle	= getIntermediateAngle(factor);
+		
+		//Based on type
+		if (m_StartAngleY != m_EndAngleY) {
+			//Calculate position
+			let Radian	= Angle.y / 180.0 * Float(M_PI);
+			let X		= m_StartOrbit.x + (cosf(Radian) * SEGMENT_ORBIT_DISTANCE);
+			let Z		= m_StartOrbit.z + (-sinf(Radian) * SEGMENT_ORBIT_DISTANCE);
+			Result		= SCNVector3(x: X, y: 0, z: Z);
+		} else if (m_StartAngleX != m_EndAngleX) {
+			
+		} else {
+			//Get difference
+			let DifferenceX	= m_EndOrbit.x - m_StartOrbit.x;
+			let DifferenceY	= m_EndOrbit.y - m_StartOrbit.y;
+			let DifferenceZ	= m_EndOrbit.z - m_StartOrbit.z;
+			
+			//Calculate position
+			let X	= m_StartOrbit.x + (DifferenceX * factor);
+			let Y	= m_StartOrbit.y + (DifferenceY * factor);
+			let Z	= m_StartOrbit.z + (DifferenceZ * factor);
+			Result	= SCNVector3(x: X + m_Segment.position.x, y: Y + m_Segment.position.y, z: Z + m_Segment.position.z);
+		}
+		
+		//Return
+		return Result;
+	}
+	
+	func rotate(angle: Float) {
+		//Rotate
+		m_Segment.rotation = SCNVector4(x: 0, y: 0, z: 1, w: angle);
+	}
 	
 	//Data
 	var m_EndAngleY:	Float;
@@ -90,3 +135,8 @@ class TubeSegment {
 	var m_Segment:		SCNNode;
 	var m_SegmentOrbit: SCNNode;
 }
+
+//Public constants
+let SEGMENT_TILE_LENGTH: Float		= 2.2;
+let SEGMENT_ORBIT_DISTANCE: Float	= 10;
+
