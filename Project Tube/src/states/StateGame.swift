@@ -138,10 +138,31 @@ class StateGame {
 		m_Camera.position			= SCNVector3(x: m_Ball.position.x + CameraX, y: m_Ball.position.y + 1.5, z: m_Ball.position.z + CameraZ);
 	}
 	
+	func isDirectionOpposite(direction1: Int, direction2: Int) -> Bool {
+		//Define 2 opposing categories
+		let Group = [ DIRECTION_STRAIGHT, DIRECTION_LEFT, DIRECTION_DOWN ];
+		
+		//Check category
+		var Category1 = 1;
+		var Category2 = 1;
+		for var i = 0; i < Group.count; i++ {
+			//Check
+			if (direction1 == Group[i]) { Category1 = 0; }
+			if (direction2 == Group[i]) { Category2 = 0; }
+		}
+		
+		//Return if different
+		return Category1 != Category2;
+	}
+	
 	func prepareDirection() {
-		//Set direction
-		m_Direction = Int(arc4random_uniform(2));
-		m_Tiles		= 4 + Int(arc4random_uniform(3) * 2);
+		do {
+			//Set direction
+			m_Direction = Int(arc4random_uniform(3));
+		} while (m_Segments.isEmpty && (m_Direction == DIRECTION_RIGHT || m_Direction == DIRECTION_UP));
+		
+		//Set tile count
+		m_Tiles = 2 + Int(arc4random_uniform(2) * 2);
 	}
 	
 	func generateSegment(tube: SCNNode) {
@@ -174,8 +195,15 @@ class StateGame {
 		}
 		
 		//If tiles been used up, set new direction
+		let PreviousDirection = m_Direction;
 		if (m_Tiles <= 0) { prepareDirection(); }
 		m_Tiles--;
+		
+		//If there were segments and direction is opposite
+		if (!m_Segments.isEmpty && isDirectionOpposite(PreviousDirection, direction2: m_Direction)) {
+			//Flip orbit
+			m_OrbitPosition = m_Segments[m_Segments.count - 1].getFlippedOrbit(m_OrbitPosition);
+		}
 		
 		//Check direction
 		var Segment: TubeSegment? = nil;
@@ -195,11 +223,15 @@ class StateGame {
 		} else if (m_Direction == DIRECTION_LEFT || m_Direction == DIRECTION_RIGHT) {
 			//Increase angle
 			var Previous	 = m_OrbitAngleY;
-			m_OrbitAngleY	+= SEGMENT_ANGLE;
+			m_OrbitAngleY	+= m_Direction == DIRECTION_LEFT ? SEGMENT_ANGLE : -SEGMENT_ANGLE;
 			if (m_OrbitAngleY > 360) {
 				//Reset
 				Previous		-= 360;
 				m_OrbitAngleY	-= 360;
+			} else if (Previous < 0 && m_OrbitAngleY < 0) {
+				//Reset
+				Previous += 360;
+				m_OrbitAngleY += 360;
 			}
 			
 			//Create segment

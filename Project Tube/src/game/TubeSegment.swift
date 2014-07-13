@@ -49,7 +49,8 @@ class TubeSegment {
 		}
 		
 		//Set angle
-		let AngleY				= (m_StartAngleY + m_EndAngleY) / 2.0;
+		let Opposite			= m_EndAngleY < m_StartAngleY;
+		var AngleY				= (m_StartAngleY + m_EndAngleY) / 2.0;
 		let AngleX				= (m_StartAngleX + m_EndAngleX) / 2.0;
 		m_SegmentOrbit.rotation	= SCNVector4(x: 0, y: 1, z: 0, w: AngleY / 180.0 * Float(M_PI));
 		
@@ -58,7 +59,7 @@ class TubeSegment {
 		var OrbitY				= (m_StartOrbit.y + m_EndOrbit.y) / 2.0;
 		var OrbitZ				= (m_StartOrbit.z + m_EndOrbit.z) / 2.0;
 		m_SegmentOrbit.position	= SCNVector3(x: OrbitX, y: OrbitY, z: OrbitZ);
-		m_Segment.position		= SCNVector3(x: SEGMENT_ORBIT_DISTANCE, y: 0, z: 0);
+		m_Segment.position		= SCNVector3(x: Opposite ? -SEGMENT_ORBIT_DISTANCE : SEGMENT_ORBIT_DISTANCE, y: 0, z: 0);
 	}
 	
 	//More specific class constructors
@@ -96,8 +97,8 @@ class TubeSegment {
 		if (m_StartAngleY != m_EndAngleY) {
 			//Calculate position
 			let Radian	= Angle.y / 180.0 * Float(M_PI);
-			let X		= m_StartOrbit.x + (cosf(Radian) * SEGMENT_ORBIT_DISTANCE);
-			let Z		= m_StartOrbit.z + (-sinf(Radian) * SEGMENT_ORBIT_DISTANCE);
+			let X		= m_StartOrbit.x + (cosf(Radian) * m_Segment.position.x);
+			let Z		= m_StartOrbit.z + (-sinf(Radian) * m_Segment.position.x);
 			Result		= SCNVector3(x: X, y: 0, z: Z);
 		} else if (m_StartAngleX != m_EndAngleX) {
 			
@@ -116,6 +117,17 @@ class TubeSegment {
 		
 		//Return
 		return Result;
+	}
+	
+	func getFlippedOrbit(orbit: SCNVector3) -> SCNVector3 {
+		//Calculate
+		let Final	= getIntermediatePosition(1);
+		let X		= orbit.x + ((Final.x - orbit.x) * 2);
+		let Y		= orbit.y + ((Final.y - orbit.y) * 2);
+		let Z		= orbit.z + ((Final.z - orbit.z) * 2);
+		
+		//Return
+		return SCNVector3(x: X, y: Y, z: Z);
 	}
 	
 	func rotate(angle: Float) {
