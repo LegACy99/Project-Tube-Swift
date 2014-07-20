@@ -49,10 +49,12 @@ class TubeSegment {
 		}
 		
 		//Set angle
-		let Opposite			= m_EndAngleY < m_StartAngleY;
-		var AngleY				= (m_StartAngleY + m_EndAngleY) / 2.0;
-		let AngleX				= (m_StartAngleX + m_EndAngleX) / 2.0;
-		m_SegmentOrbit.rotation	= SCNVector4(x: 0, y: 1, z: 0, w: AngleY / 180.0 * Float(M_PI));
+		let Opposite			= m_EndAngleY < m_StartAngleY || m_EndAngleX < m_StartAngleX;
+		let AngleY				= ((m_StartAngleY + m_EndAngleY) / 2.0) / 180.0 * Float(M_PI);
+		let AngleX				= ((m_StartAngleX + m_EndAngleX) / 2.0) / 180.0 * Float(M_PI);
+		let XRotation			= SCNMatrix4MakeRotation(AngleX, -1, 0, 0);
+		let YRotation			= SCNMatrix4MakeRotation(AngleY, 0, 1, 0);
+		m_SegmentOrbit.transform	= SCNMatrix4Mult(XRotation, YRotation);
 		
 		//Set position
 		var OrbitX				= (m_StartOrbit.x + m_EndOrbit.x) / 2.0;
@@ -62,8 +64,7 @@ class TubeSegment {
 		m_Segment.position		= SCNVector3(x: Opposite ? -SEGMENT_ORBIT_DISTANCE : SEGMENT_ORBIT_DISTANCE, y: 0, z: 0);
 		if (m_StartAngleX != m_EndAngleX) {
 			//
-			m_Segment.position		= SCNVector3(x: 0, y: SEGMENT_ORBIT_DISTANCE, z: 0);
-			m_SegmentOrbit.rotation	= SCNVector4(x: -1, y: 0, z: 0, w: AngleX / 180.0 * Float(M_PI));
+			m_Segment.position		= SCNVector3(x: 0, y: Opposite ? -SEGMENT_ORBIT_DISTANCE : SEGMENT_ORBIT_DISTANCE, z: 0);
 		}
 	}
 	
@@ -98,19 +99,16 @@ class TubeSegment {
 		var Result	= SCNVector3(x: 0, y: 0, z: 0);
 		let Angle	= getIntermediateAngle(factor);
 		
-		//Based on type
-		if (m_StartAngleY != m_EndAngleY) {
+		//If angled
+		if (m_StartAngleY != m_EndAngleY || m_StartAngleX != m_EndAngleX) {
 			//Calculate position
-			let Radian	= Angle.y / 180.0 * Float(M_PI);
-			let X		= m_StartOrbit.x + (cosf(Radian) * m_Segment.position.x);
-			let Z		= m_StartOrbit.z + (-sinf(Radian) * m_Segment.position.x);
-			Result		= SCNVector3(x: X, y: 0, z: Z);
-		} else if (m_StartAngleX != m_EndAngleX) {
-			//Calculate position
-			let Radian	= Angle.x / 180.0 * Float(M_PI);
-			let Y		= m_StartOrbit.y + (cosf(Radian) * m_Segment.position.y);
-			let Z		= m_StartOrbit.z + (-sinf(Radian) * m_Segment.position.y);
-			Result		= SCNVector3(x: 0, y: Y, z: Z);
+			let RadianX	= Angle.x / 180.0 * Float(M_PI);
+			let RadianY	= Angle.y / 180.0 * Float(M_PI);
+			let X		= m_StartOrbit.x + (cosf(RadianY) * m_Segment.position.x);
+			let Y		= m_StartOrbit.y + (cosf(RadianX) * m_Segment.position.y);
+			//let Z		= m_StartOrbit.z + (-sinf(RadianY) * m_Segment.position.x); //Horizontal
+			let Z		= m_StartOrbit.z + (-sinf(RadianX) * m_Segment.position.y); //Vertical
+			Result		= SCNVector3(x: X, y: Y, z: Z);
 		} else {
 			//Get intermediate orbit
 			let OrbitX = m_StartOrbit.x + ((m_EndOrbit.x - m_StartOrbit.x) * factor);

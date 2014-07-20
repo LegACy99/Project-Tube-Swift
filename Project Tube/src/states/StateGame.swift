@@ -142,7 +142,7 @@ class StateGame {
 		let CameraOffsetZ:Float		= 1.5 * -sinf(AngleX);
 		let CameraX: Float			= -cosf(AngleY + Float(M_PI_2)) * CameraDistance;
 		let CameraY: Float			= cosf(AngleX - Float(M_PI_2)) * CameraDistance;
-		let CameraZ: Float			= -sinf(AngleX - Float(M_PI_2)) * CameraDistance;//sinf(AngleY + Float(M_PI_2)) * CameraDistance;
+		let CameraZ: Float			= sinf(AngleY + Float(M_PI_2)) * (-sinf(AngleX - Float(M_PI_2)) * CameraDistance);
 		m_Camera.position			= SCNVector3(x: m_Ball.position.x + CameraX, y: m_Ball.position.y + CameraY + CameraOffsetY, z: m_Ball.position.z + CameraZ + CameraOffsetZ);
 	}
 	
@@ -249,6 +249,15 @@ class StateGame {
 			//Increase angle
 			var Previous	 = m_OrbitAngleX;
 			m_OrbitAngleX	+= m_Direction == DIRECTION_DOWN ? SEGMENT_ANGLE : -SEGMENT_ANGLE;
+			if (m_OrbitAngleX > 360) {
+				//Reset
+				Previous		-= 360;
+				m_OrbitAngleX	-= 360;
+			} else if (Previous < 0 && m_OrbitAngleY < 0) {
+				//Reset
+				Previous += 360;
+				m_OrbitAngleX += 360;
+			}
 			
 			//Create segment
 			Segment = TubeSegment.create(Tiles, orbit: m_OrbitPosition, angleY: m_OrbitAngleY, startX: Previous, endX: m_OrbitAngleX);
@@ -266,8 +275,8 @@ class StateGame {
 	}
 	
 	//Constants
-	let DIRECTION_UP: Int		= 3;
-	let DIRECTION_DOWN: Int		= 4
+	let DIRECTION_UP: Int		= 4;
+	let DIRECTION_DOWN: Int		= 3
 	let DIRECTION_LEFT: Int		= 1;
 	let DIRECTION_RIGHT: Int	= 2;
 	let DIRECTION_STRAIGHT: Int	= 0;
