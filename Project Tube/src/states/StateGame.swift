@@ -29,9 +29,8 @@ class StateGame {
 		m_Ball.addAnimation(BallAnimation, forKey: nil);
 		
 		//Create camera
-		m_Camera			= SCNNode();
-		m_Camera.camera		= SCNCamera();
-		m_Camera.rotation	= SCNVector4(x: 1, y: 0, z: 0, w: -15.0 / 180.0 * Float(M_PI));
+		m_Camera		= SCNNode();
+		m_Camera.camera	= SCNCamera();
 		
 		//Create sun
 		let Sun			= SCNNode();
@@ -119,23 +118,32 @@ class StateGame {
 			generateSegment(m_Tube);
 		}
 		
+		//Get angle
+		let Node	= m_Segments[1];
+		let Factor	= Float(m_TileTime) / 500.0;
+		let Angle	= Node.getIntermediateAngle(Factor);
+		let AngleY	= Angle.y / 180.0 * Float(M_PI);
+		let AngleX	= Angle.x / 180.0 * Float(M_PI);
+		
 		//Set ball position
-		let Node		= m_Segments[1];
-		let Factor		= Float(m_TileTime) / 500.0;
+		let OffsetY		= -1.5 * cosf(AngleX);
+		let OffsetZ		= -1.5 * -sinf(AngleX);
 		let Position	= Node.getIntermediatePosition(Factor);
-		m_Ball.position	= SCNVector3(x: Position.x, y: m_Ball.position.y, z: Position.z);
+		m_Ball.position	= SCNVector3(x: Position.x, y: Position.y + OffsetY, z: Position.z + OffsetZ);
 		
 		//Set camera rotation
-		let Angle			= Node.getIntermediateAngle(Factor).y / 180.0 * Float(M_PI);
-		let XRotation		= SCNMatrix4MakeRotation(-15.0 / 180.0 * Float(M_PI), 1, 0, 0);
-		let YRotation		= SCNMatrix4MakeRotation(Angle, 0, 1, 0);
+		let XRotation		= SCNMatrix4MakeRotation(AngleX + (15.0 / 180.0 * Float(M_PI)), -1, 0, 0);
+		let YRotation		= SCNMatrix4MakeRotation(AngleY, 0, 1, 0);
 		m_Camera.transform	= SCNMatrix4Mult(XRotation, YRotation);
 		
 		//Set camera position
 		let CameraDistance:Float	= 2.5;
-		let CameraX: Float			= -cosf(Angle + Float(M_PI_2)) * CameraDistance;
-		let CameraZ: Float			= sinf(Angle + Float(M_PI_2)) * CameraDistance;
-		m_Camera.position			= SCNVector3(x: m_Ball.position.x + CameraX, y: m_Ball.position.y + 1.5, z: m_Ball.position.z + CameraZ);
+		let CameraOffsetY:Float		= 1.5 * cosf(AngleX);
+		let CameraOffsetZ:Float		= 1.5 * -sinf(AngleX);
+		let CameraX: Float			= -cosf(AngleY + Float(M_PI_2)) * CameraDistance;
+		let CameraY: Float			= cosf(AngleX - Float(M_PI_2)) * CameraDistance;
+		let CameraZ: Float			= -sinf(AngleX - Float(M_PI_2)) * CameraDistance;//sinf(AngleY + Float(M_PI_2)) * CameraDistance;
+		m_Camera.position			= SCNVector3(x: m_Ball.position.x + CameraX, y: m_Ball.position.y + CameraY + CameraOffsetY, z: m_Ball.position.z + CameraZ + CameraOffsetZ);
 	}
 	
 	func isDirectionOpposite(direction1: Int, direction2: Int) -> Bool {
@@ -158,7 +166,8 @@ class StateGame {
 	func prepareDirection() {
 		do {
 			//Set direction
-			m_Direction = Int(arc4random_uniform(3));
+			m_Direction = DIRECTION_DOWN;
+			//m_Direction = Int(arc4random_uniform(3));
 		} while (m_Segments.isEmpty && (m_Direction == DIRECTION_RIGHT || m_Direction == DIRECTION_UP));
 		
 		//Set tile count
@@ -236,6 +245,13 @@ class StateGame {
 			
 			//Create segment
 			Segment	= TubeSegment.create(Tiles, orbit: m_OrbitPosition, angleX: m_OrbitAngleX, startY: Previous, endY: m_OrbitAngleY);
+		} else if (m_Direction == DIRECTION_DOWN || m_Direction == DIRECTION_UP) {
+			//Increase angle
+			var Previous	 = m_OrbitAngleX;
+			m_OrbitAngleX	+= m_Direction == DIRECTION_DOWN ? SEGMENT_ANGLE : -SEGMENT_ANGLE;
+			
+			//Create segment
+			Segment = TubeSegment.create(Tiles, orbit: m_OrbitPosition, angleY: m_OrbitAngleY, startX: Previous, endX: m_OrbitAngleX);
 		}
 		
 		//If segment is created
